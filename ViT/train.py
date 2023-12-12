@@ -79,7 +79,7 @@ def valid(args, model, writer, test_loader, global_step, log, phase="Validation"
         writer.add_scalar("test/accuracy", scalar_value=accuracy, global_step=global_step)
     return accuracy
 
-    def train(args, model, train_loader, val_loader, test_loader, log, writer):
+def train(args, model, train_loader, val_loader, test_loader, log, writer):
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -100,7 +100,7 @@ def valid(args, model, writer, test_loader, global_step, log, phase="Validation"
                 feature_params.append(parameter)
 
         params_list = [{"params": filter(lambda p: p.requires_grad, feature_params)},
-                       {"params": filter(lambda p: p.requires_grad, head_params), "lr": args.learning_rate * 10}]
+                    {"params": filter(lambda p: p.requires_grad, head_params), "lr": args.learning_rate * 10}]
     else:
         params_list = model.parameters()
 

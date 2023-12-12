@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 from torchvision import datasets
-from ViT.dataset.customDataset import Custom_Dataset
+#from ViT.dataset.customDataset import Custom_Dataset
 
 
 def init_datasets(args, transform_train, transform_test):
@@ -17,42 +17,42 @@ def init_datasets(args, transform_train, transform_test):
         train_datasets = datasets.CIFAR100(root=os.path.expanduser('~/dataset'), train=True, download=True, transform=transform_train)
         val_datasets = datasets.CIFAR100(root=os.path.expanduser('~/dataset'), train=False, download=True, transform=transform_test)
         test_datasets = datasets.CIFAR100(root=os.path.expanduser('~/dataset'), train=False, download=True, transform=transform_test)
-    elif args.dataset == 'Pet37':
-        root, txt_train, txt_val, txt_test = get_pet37_data_split(args.data, args.customSplit)
+    # elif args.dataset == 'Pet37':
+    #     root, txt_train, txt_val, txt_test = get_pet37_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
-    elif args.dataset == 'food101':
-        root, txt_train, txt_val, txt_test = get_food101_data_split(args.data, args.customSplit)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    # elif args.dataset == 'food101':
+    #     root, txt_train, txt_val, txt_test = get_food101_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
-    elif args.dataset == 'flowers':
-        root, txt_train, txt_val, txt_test = get_flowers_data_split(args.data, args.customSplit)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    # elif args.dataset == 'flowers':
+    #     root, txt_train, txt_val, txt_test = get_flowers_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
-    elif args.dataset == 'stanford_car':
-        root, txt_train, txt_val, txt_test = get_stanford_car_data_split(args.data, args.customSplit)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    # elif args.dataset == 'stanford_car':
+    #     root, txt_train, txt_val, txt_test = get_stanford_car_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
-    elif args.dataset == 'aircraft':
-        root, txt_train, txt_val, txt_test = get_aircraft_data_split(args.data, args.customSplit)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    # elif args.dataset == 'aircraft':
+    #     root, txt_train, txt_val, txt_test = get_aircraft_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
-    elif args.dataset == 'cub200':
-        root, txt_train, txt_val, txt_test = get_cub200_data_split(args.data, args.customSplit)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    # elif args.dataset == 'cub200':
+    #     root, txt_train, txt_val, txt_test = get_cub200_data_split(args.data, args.customSplit)
 
-        train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
-        val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
-        test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
+    #     train_datasets = Custom_Dataset(root=root, txt=txt_train, transform=transform_train)
+    #     val_datasets = Custom_Dataset(root=root, txt=txt_val, transform=transform_test)
+    #     test_datasets = Custom_Dataset(root=root, txt=txt_test, transform=transform_test)
     else:
         raise ValueError("Dataset of {} is not found".format(args.dataset))
 
