@@ -80,7 +80,6 @@ def valid(args, model, writer, test_loader, global_step, log, phase="Validation"
     return accuracy
 
 def train(args, model, train_loader, val_loader, test_loader, log, writer):
-
     batch_time = AverageMeter()
     data_time = AverageMeter()
     memory_meter = AverageMeter()
