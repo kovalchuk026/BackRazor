@@ -355,6 +355,8 @@ def main():
     # Prepare dataset
     print("!!!!!!!!!!!!!")
     model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
+    #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
+    #print(len(model.transformer.encoder.layer))
     print(len(model.transformer.encoder.layer))
     train(args, model, train_loader, val_loader, test_loader, log, writer)
 
