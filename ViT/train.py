@@ -355,18 +355,19 @@ def main():
     # Training
     # Prepare dataset
     n_layers = 2
-    acc = []
-    for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
-        cp_model = copy.deepcopy(model)
-        cp_model.transformer.encoder.layer = nn.ModuleList([cp_model.transformer.encoder.layer[i] for i in range(len(cp_model.transformer.encoder.layer)) if i not in range(j, j + n_layers, 1) ])
-        cp_model.eval()
-        acc.append(valid(args, cp_model, writer, val_loader, 0, log))
-    max = 0
-    i = 0
-    for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
-        if max < acc[j]:
-            max = acc[j]
-            i = j
+    # acc = []
+    # for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
+    #     cp_model = copy.deepcopy(model)
+    #     cp_model.transformer.encoder.layer = nn.ModuleList([cp_model.transformer.encoder.layer[i] for i in range(len(cp_model.transformer.encoder.layer)) if i not in range(j, j + n_layers, 1) ])
+    #     cp_model.eval()
+    #     acc.append(valid(args, cp_model, writer, val_loader, 0, log))
+    # max = 0
+    # i = 0
+    # for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
+    #     if max < acc[j]:
+    #         max = acc[j]
+    #         i = j
+    i = 4
     model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
     print("!!!!!!!!!!!!!")
     print(range(i, i + n_layers, 1))
