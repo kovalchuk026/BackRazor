@@ -354,8 +354,8 @@ def main():
     # Training
     # Prepare dataset
     print("!!!!!!!!!!!!!")
-    model.transormer.encode.layer = model.transormer.encode.layer[2:]
-    print(len(model.transormer.encode.layer))
+    model.transformer.encoder.layer = model.transformer.encoders.layer[2:]
+    print(len(model.transformer.encoder.layer))
     train(args, model, train_loader, val_loader, test_loader, log, writer)
 
 
