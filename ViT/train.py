@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 sys.path.append(".")
 import argparse
+import copy
 
 from datetime import timedelta
 
@@ -353,8 +354,23 @@ def main():
              format(args.dataset, len(train_loader.dataset), len(val_loader.dataset)))
     # Training
     # Prepare dataset
+    n_layers = 2
+    acc = []
+    for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
+        cp_model = copy.deepcopy(model)
+        cp_model.transformer.encoder.layer = nn.ModuleList([cp_model.transformer.encoder.layer[i] for i in range(len(cp_model.transformer.encoder.layer)) if i not in range(j, j + n_layers, 1) ])
+        cp_model.eval()
+        acc.append(valid(args, cp_model, writer, val_loader, 0, log))
+    max = 0
+    i = 0
+    for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
+        if max < acc[j]:
+            max = acc[j]
+            i = j
+    model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
     print("!!!!!!!!!!!!!")
-    model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
+    print(range(i, i + n_layers, 1))
+    #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
     #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
     #print(len(model.transformer.encoder.layer))
     print(len(model.transformer.encoder.layer))
