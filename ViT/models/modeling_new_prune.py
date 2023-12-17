@@ -51,10 +51,11 @@ class MlpActPrune(nn.Module):
         return x
     
 class AttentionActPrune(nn.Module):
-    def __init__(self, config, vis, masker):
+    def __init__(self, config, vis, masker, red):
         super(AttentionActPrune, self).__init__()
         self.vis = vis
         self.masker = masker
+        config. hidden_size *= red
         self.num_attention_heads = config.transformer["num_heads"]
         self.attention_head_size = int(config.hidden_size / self.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size

@@ -3,8 +3,9 @@ sys.path.append(".")
 import random
 import os
 import numpy as np
+import copy
 import torch
-from ViT.models.modeling import VisionTransformer, CONFIGS
+from ViT.models.modeling import VisionTransformer, CONFIGS, Block
 from custom_functions.masker import Masker
 
 class AverageMeter(object):
@@ -56,6 +57,19 @@ def setup(args, log, num_classes):
 
     return args, model
 
+def add_layers( args, model, n, red=2 ):
+    n -= 1
+    config = CONFIGS[args.model_type]
+
+    masker = None if not args.new_backrazor else Masker(prune_ratio=args.back_prune_ratio) 
+    config. hidden_size /= red
+    config. mlp_dim /= red
+    layer = Block( config = config, masker=masker, new_backrazor=args.new_backrazor, red = red )
+    model.transformer.encoder.layer.append(copy.deepcopy(layer))
+    for i in range(n):
+        layer = Block( config = config, masker=masker, new_backrazor=args.new_backrazor )
+        model.transformer.encoder.layer.append(copy.deepcopy(layer))
+    
 def count_parameters(model):
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return params/1000000

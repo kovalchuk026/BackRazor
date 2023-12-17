@@ -187,27 +187,33 @@ class Embeddings(nn.Module):
         return embeddings
     
 class Block(nn.Module):
-    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1,
-                 masker=None, new_backrazor=False):
+    def __init__(self, config, vis=False, prune_mode=False, prune_after_softmax=False, n_tokens=1,
+                 masker=None, new_backrazor=False, red=1):
         super(Block, self).__init__()
         self.hidden_size = config.hidden_size
 
         self.new_backrazor = new_backrazor
-
+        self.trans = False
+        if red > 1:
+            self. trans = True
+        
         if new_backrazor:
-            self.attention_norm = LayerNormSparse(config.hidden_size, eps=1e-6, masker=masker, quantize=config.quantize)
-            self.ffn_norm = LayerNormSparse(config.hidden_size, eps=1e-6, masker=masker, quantize=config.quantize)
+            self.attention_norm = LayerNormSparse(config.hidden_size * red, eps=1e-6, masker=masker, quantize=config.quantize)
+            self.ffn_norm = LayerNormSparse(config.hidden_size * red, eps=1e-6, masker=masker, quantize=config.quantize)
         else:
-            self.attention_norm = LayerNorm(config.hidden_size, eps=1e-6)
-            self.ffn_norm = LayerNorm(config.hidden_size, eps=1e-6)
+            self.attention_norm = LayerNorm(config.hidden_size * red, eps=1e-6)
+            self.ffn_norm = LayerNorm(config.hidden_size * red, eps=1e-6)
 
+        if self. trans:
+            self. fc = Linear(config. hidden_size * red, config.hidden_size)
+        
         if new_backrazor:
             self.ffn = MlpActPrune(config, masker)
         else:
             self.ffn = Mlp(config)
 
         if new_backrazor:
-            self.attn = AttentionActPrune(config, vis, masker)
+            self.attn = AttentionActPrune(config, vis, masker, red)
         else:
             self.attn = Attention(config, vis, prune_mode, prune_after_softmax, n_tokens)
 
@@ -216,6 +222,8 @@ class Block(nn.Module):
         x = self.attention_norm(x)
         x, weights = self.attn(x)
         x = x + h
+        if self. trans:
+            x = self. fc(x)
 
         # print("attn output {}".format(x.mean(-1).mean(-1)))
 

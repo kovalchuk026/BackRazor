@@ -17,7 +17,7 @@ from ViT.utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
 from ViT.utils.data_utils import get_loader
 from ViT.utils.utils import *
 from ViT.utils.memory_cost_profiler import profile_memory_cost
-
+import modeling
 
 import time
 import mesa as ms
@@ -339,7 +339,7 @@ def main():
         ms.policy.deploy_on_init(model, 'ViT/policy_tiny-8bit.txt', verbose=print, override_verbose=False)
         model.to(args.device)
 
-    log.info(str(model))
+    
 
     activation_bits = 32
     memory_cost, memory_cost_dict = profile_memory_cost(model, input_size=(1, 3, 224, 224), require_backward=True,
@@ -355,26 +355,19 @@ def main():
     # Training
     # Prepare dataset
     n_layers = 2
-    # acc = []
-    # for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
-    #     cp_model = copy.deepcopy(model)
-    #     cp_model.transformer.encoder.layer = nn.ModuleList([cp_model.transformer.encoder.layer[i] for i in range(len(cp_model.transformer.encoder.layer)) if i not in range(j, j + n_layers, 1) ])
-    #     cp_model.eval()
-    #     acc.append(valid(args, cp_model, writer, val_loader, 0, log))
-    # max = 0
-    # i = 0
-    # for j in range(len(model.transformer.encoder.layer) - n_layers + 1):
-    #     if max < acc[j]:
-    #         max = acc[j]
-    #         i = j
+    
     i = 4
     model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
+    model.transformer.encoder.layer = model.transformer.encoder.layer[:-2]
     print("!!!!!!!!!!!!!")
     print(range(i, i + n_layers, 1))
     #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
     #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
     #print(len(model.transformer.encoder.layer))
     print(len(model.transformer.encoder.layer))
+    add_layers( args, model, 2, 2)
+    print(len(model.transformer.encoder.layer))
+    log.info(str(model))
     train(args, model, train_loader, val_loader, test_loader, log, writer)
 
 
