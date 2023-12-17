@@ -274,14 +274,22 @@ class Block(nn.Module):
             self.ffn_norm.bias.copy_(np2th(weights[pjoin(ROOT, MLP_NORM, "bias")]))
 
 class Encoder(nn.Module):
-    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1, **block_kwargs):
+    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1, upto = 10, **block_kwargs):
         super(Encoder, self).__init__()
         self.vis = vis
         self.prune_mode = prune_mode
         self.layer = nn.ModuleList()
         self.encoder_norm = LayerNorm(config.hidden_size, eps=1e-6)
-        for _ in range(config.transformer["num_layers"]):
+        for _ in range(upto):
             layer = Block(config, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
+            self.layer.append(copy.deepcopy(layer))
+        redconf = copy.deepcopy(config)
+        redconf. hidden_size //= 2
+        redconf. mlp_dim //= 2
+        layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, red = 2, **block_kwargs)
+        self.layer.append(copy.deepcopy(layer))
+        for _ in range(config.transformer["num_layers"] - upto - 1):
+            layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
             self.layer.append(copy.deepcopy(layer))
 
     def forward(self, hidden_states):
@@ -294,13 +302,13 @@ class Encoder(nn.Module):
         return encoded, attn_weights
     
 class Transformer(nn.Module):
-    def __init__(self, config, img_size, vis, prune_mode=False, prune_after_softmax=False, quantize=False, half=True, **kwargs):
+    def __init__(self, config, img_size, vis, prune_mode=False, prune_after_softmax=False, quantize=False, half=True, upto = 8, **kwargs):
         super(Transformer, self).__init__()
         self.embeddings = Embeddings(config, img_size=img_size)
         config.quantize = quantize
         config.half = half
         self.encoder = Encoder(config, vis, prune_mode, prune_after_softmax=prune_after_softmax,
-                               n_tokens=self.embeddings.position_embeddings.shape[1], **kwargs)
+                               n_tokens=self.embeddings.position_embeddings.shape[1], upto = upto, **kwargs)
 
     def forward(self, input_ids):
         # print("input_ids is {}".format(input_ids.mean(-1).mean(-1)))
@@ -311,7 +319,7 @@ class Transformer(nn.Module):
     
 class VisionTransformer(nn.Module):
     def __init__(self, config, img_size=224, num_classes=21843, zero_head=False, vis=False,
-                 prune_mode=False, prune_after_softmax=False, **kwargs):
+                 prune_mode=False, prune_after_softmax=False, upto = 8, **kwargs):
         super(VisionTransformer, self).__init__()
         self.num_classes = num_classes
         self.zero_head = zero_head
@@ -319,11 +327,12 @@ class VisionTransformer(nn.Module):
         self.prune_mode = prune_mode
         self.prune_after_softmax = prune_after_softmax
 
-        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, **kwargs)
+        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, upto, **kwargs)
         self.head = Linear(config.hidden_size, num_classes)
         self.fc = Linear(config.hidden_size, config.hidden_size)
         self. trans = False
         self. red = 1
+        self. upto = upto
     def forward(self, x, labels=None, return_encoded_feature=False):
         x, attn_weights = self.transformer(x)
         if return_encoded_feature:
@@ -379,7 +388,7 @@ class VisionTransformer(nn.Module):
                 posemb = np.concatenate([posemb_tok, posemb_grid], axis=1)
                 self.transformer.embeddings.position_embeddings.copy_(np2th(posemb))
 
-            for bname, block in self.transformer.encoder.named_children():
+            for bname, block in self.transformer.encoder.named_children()[0:self.upto]:
                 for uname, unit in block.named_children():
                     unit.load_from(weights, n_block=uname)
 
