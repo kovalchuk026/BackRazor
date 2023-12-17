@@ -284,9 +284,10 @@ class Encoder(nn.Module):
             layer = Block(config, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
             self.layer.append(copy.deepcopy(layer))
         redconf = copy.deepcopy(config)
-        redconf. hidden_size //= 2
-        redconf. mlp_dim //= 2
-        layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, red = 2, **block_kwargs)
+        red = 2
+        redconf. hidden_size //= red
+        redconf. transformer['mlp_dim'] //= red
+        layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, red = red, **block_kwargs)
         self.layer.append(copy.deepcopy(layer))
         for _ in range(config.transformer["num_layers"] - upto - 1):
             layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
@@ -327,11 +328,10 @@ class VisionTransformer(nn.Module):
         self.prune_mode = prune_mode
         self.prune_after_softmax = prune_after_softmax
 
-        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, upto, **kwargs)
+        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, upto=upto, **kwargs)
         self.head = Linear(config.hidden_size, num_classes)
-        self.fc = Linear(config.hidden_size, config.hidden_size)
-        self. trans = False
-        self. red = 1
+        self.fc = Linear(config.hidden_size//2, config.hidden_size)
+        self. trans = True
         self. upto = upto
     def forward(self, x, labels=None, return_encoded_feature=False):
         x, attn_weights = self.transformer(x)
@@ -388,9 +388,10 @@ class VisionTransformer(nn.Module):
                 posemb = np.concatenate([posemb_tok, posemb_grid], axis=1)
                 self.transformer.embeddings.position_embeddings.copy_(np2th(posemb))
 
-            for bname, block in self.transformer.encoder.named_children()[0:self.upto]:
+            for bname, block in self.transformer.encoder.named_children():
                 for uname, unit in block.named_children():
-                    unit.load_from(weights, n_block=uname)
+                    if(int(uname)<self.upto):
+                        unit.load_from(weights, n_block=uname)
 
             if self.transformer.embeddings.hybrid:
                 self.transformer.embeddings.hybrid_model.root.conv.weight.copy_(np2th(weights["conv_root/kernel"], conv=True))
