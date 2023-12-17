@@ -17,7 +17,6 @@ from ViT.utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
 from ViT.utils.data_utils import get_loader
 from ViT.utils.utils import *
 from ViT.utils.memory_cost_profiler import profile_memory_cost
-import modeling
 
 import time
 import mesa as ms
@@ -314,6 +313,20 @@ def main():
 
     # Model & Tokenizer Setup
     args, model = setup(args, log, num_classes)
+    n_layers = 2
+    
+    i = 4
+    model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
+    model.transformer.encoder.layer = model.transformer.encoder.layer[:-2]
+    print("!!!!!!!!!!!!!")
+    print(range(i, i + n_layers, 1))
+    #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
+    #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
+    #print(len(model.transformer.encoder.layer))
+    print(len(model.transformer.encoder.layer))
+    add_layers( args, model, 2, 2)
+    print(len(model.transformer.encoder.layer))
+    log.info(str(model))
 
     if args.bitfit:
         assert not ("resnet" in args.model_type)
@@ -354,20 +367,7 @@ def main():
              format(args.dataset, len(train_loader.dataset), len(val_loader.dataset)))
     # Training
     # Prepare dataset
-    n_layers = 2
     
-    i = 4
-    model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
-    model.transformer.encoder.layer = model.transformer.encoder.layer[:-2]
-    print("!!!!!!!!!!!!!")
-    print(range(i, i + n_layers, 1))
-    #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
-    #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
-    #print(len(model.transformer.encoder.layer))
-    print(len(model.transformer.encoder.layer))
-    add_layers( args, model, 2, 2)
-    print(len(model.transformer.encoder.layer))
-    log.info(str(model))
     train(args, model, train_loader, val_loader, test_loader, log, writer)
 
 

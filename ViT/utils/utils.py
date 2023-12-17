@@ -7,6 +7,7 @@ import copy
 import torch
 from ViT.models.modeling import VisionTransformer, CONFIGS, Block
 from custom_functions.masker import Masker
+from torch.nn import Linear
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -60,10 +61,10 @@ def setup(args, log, num_classes):
 def add_layers( args, model, n, red=2 ):
     n -= 1
     config = CONFIGS[args.model_type]
-
+    model.fc = Linear(config.hidden_size//red, config.hidden_size)
     masker = None if not args.new_backrazor else Masker(prune_ratio=args.back_prune_ratio) 
-    config. hidden_size /= red
-    config. mlp_dim /= red
+    config. hidden_size //= red
+    config. transformer. mlp_dim //= red
     layer = Block( config = config, masker=masker, new_backrazor=args.new_backrazor, red = red )
     model.transformer.encoder.layer.append(copy.deepcopy(layer))
     for i in range(n):

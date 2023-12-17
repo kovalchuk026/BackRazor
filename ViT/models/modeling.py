@@ -199,10 +199,10 @@ class Block(nn.Module):
         
         if new_backrazor:
             self.attention_norm = LayerNormSparse(config.hidden_size * red, eps=1e-6, masker=masker, quantize=config.quantize)
-            self.ffn_norm = LayerNormSparse(config.hidden_size * red, eps=1e-6, masker=masker, quantize=config.quantize)
+            self.ffn_norm = LayerNormSparse(config.hidden_size , eps=1e-6, masker=masker, quantize=config.quantize)
         else:
             self.attention_norm = LayerNorm(config.hidden_size * red, eps=1e-6)
-            self.ffn_norm = LayerNorm(config.hidden_size * red, eps=1e-6)
+            self.ffn_norm = LayerNorm(config.hidden_size , eps=1e-6)
 
         if self. trans:
             self. fc = Linear(config. hidden_size * red, config.hidden_size)
@@ -321,12 +321,15 @@ class VisionTransformer(nn.Module):
 
         self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, **kwargs)
         self.head = Linear(config.hidden_size, num_classes)
-
+        self.fc = Linear(config.hidden_size, config.hidden_size)
+        self. trans = False
+        self. red = 1
     def forward(self, x, labels=None, return_encoded_feature=False):
         x, attn_weights = self.transformer(x)
         if return_encoded_feature:
             return x
-
+        if self. trans:
+            x = self.fc(x)
         logits = self.head(x[:, 0])
 
         if labels is not None:
