@@ -287,7 +287,7 @@ class Encoder(nn.Module):
         red = 2
         redconf. hidden_size //= red
         redconf. transformer['mlp_dim'] //= red
-        layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, red = red, **block_kwargs)
+        layer = Block(copy.deepcopy(redconf), vis, prune_mode, prune_after_softmax, n_tokens, red = red, **block_kwargs)
         self.layer.append(copy.deepcopy(layer))
         for _ in range(config.transformer["num_layers"] - upto - 1):
             layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
