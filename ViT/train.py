@@ -323,6 +323,7 @@ def main():
     #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
     #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
     #print(len(model.transformer.encoder.layer))
+    print(count_parameters(model))
     print(len(model.transformer.encoder.layer))
     log.info(str(model))
 
