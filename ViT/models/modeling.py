@@ -279,19 +279,22 @@ class Encoder(nn.Module):
         self.vis = vis
         self.prune_mode = prune_mode
         self.layer = nn.ModuleList()
+        red = 2
         self.encoder_norm = LayerNorm(config.hidden_size, eps=1e-6)
         for _ in range(upto):
             layer = Block(config, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
             self.layer.append(copy.deepcopy(layer))
         redconf = copy.deepcopy(config)
-        red = 2
+        
         redconf. hidden_size //= red
         redconf. transformer['mlp_dim'] //= red
+        self.fc = Linear(redconf.hidden_size, config.hidden_size)
         layer = Block(copy.deepcopy(redconf), vis, prune_mode, prune_after_softmax, n_tokens, red = red, **block_kwargs)
         self.layer.append(copy.deepcopy(layer))
         for _ in range(config.transformer["num_layers"] - upto - 1):
             layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
             self.layer.append(copy.deepcopy(layer))
+        
 
     def forward(self, hidden_states):
         attn_weights = []
@@ -299,6 +302,7 @@ class Encoder(nn.Module):
             hidden_states, weights = layer_block(hidden_states)
             if self.vis:
                 attn_weights.append(weights)
+        hidden_states = self.fc(hidden_states)
         encoded = self.encoder_norm(hidden_states)
         return encoded, attn_weights
     
