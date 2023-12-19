@@ -312,7 +312,7 @@ def main():
     num_classes = len(np.unique(train_loader.dataset.targets))
 
     # Model & Tokenizer Setup
-    args, model = setup(args, log, num_classes, upto = 10)
+    args, model = setup(args, log, num_classes)
 
     n_layers = 0    
     i = 4
