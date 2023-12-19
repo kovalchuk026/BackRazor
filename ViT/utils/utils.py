@@ -36,14 +36,17 @@ def save_model(args, model, log):
     torch.save(model_to_save.state_dict(), model_checkpoint)
     log.info("Saved model checkpoint to [DIR: {}]".format(os.path.join(log.path, args.name)))
 
-def setup(args, log, num_classes, upto):
+def setup(args, log, num_classes, upto = -1):
     if args.model_type in CONFIGS:
         # Prepare model
         config = CONFIGS[args.model_type]
 
         masker = None if not args.new_backrazor else Masker(prune_ratio=args.back_prune_ratio) 
-
-        model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,
+        if upto == -1:
+            model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,
+                                  masker=masker, quantize=args.quantize, new_backrazor=args.new_backrazor)
+        else:
+            model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,
                                   masker=masker, quantize=args.quantize, new_backrazor=args.new_backrazor, upto = upto)
         model.load_from(np.load(args.pretrained_dir))
         log.info("{}".format(config))
@@ -57,20 +60,6 @@ def setup(args, log, num_classes, upto):
     log.info("Total Parameter: \t {}M".format(num_params))
 
     return args, model
-
-def add_layers( args, model, n, red=2 ):
-    n -= 1
-    config = CONFIGS[args.model_type]
-    model.fc = Linear(config.hidden_size//red, config.hidden_size)
-    model.trans = True
-    masker = None if not args.new_backrazor else Masker(prune_ratio=args.back_prune_ratio) 
-    config. hidden_size //= red
-    config. transformer. mlp_dim //= red
-    layer = Block( config = config, masker=masker, new_backrazor=args.new_backrazor, red = red )
-    model.transformer.encoder.layer.append(copy.deepcopy(layer))
-    for i in range(n):
-        layer = Block( config = config, masker=masker, new_backrazor=args.new_backrazor )
-        model.transformer.encoder.layer.append(copy.deepcopy(layer))
     
 def count_parameters(model):
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)

@@ -313,16 +313,12 @@ def main():
 
     # Model & Tokenizer Setup
     args, model = setup(args, log, num_classes, upto = 10)
-    n_layers = 0
-    
+
+    n_layers = 0    
     i = 4
     #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[j] for j in range(len(model.transformer.encoder.layer)) if j not in range(i, i + n_layers, 1) ])
-    #model.transformer.encoder.layer = model.transformer.encoder.layer[:-2]
     print("!!!!!!!!!!!!!")
     print(range(i, i + n_layers, 1))
-    #model.transformer.encoder.layer = model.transformer.encoder.layer[2:]
-    #model.transformer.encoder.layer = nn.ModuleList([model.transformer.encoder.layer[i] for i in range(len(model.transformer.encoder.layer)) if i != 6 and i != 7])
-    #print(len(model.transformer.encoder.layer))
     print(count_parameters(model))
     print(len(model.transformer.encoder.layer))
     log.info(str(model))
