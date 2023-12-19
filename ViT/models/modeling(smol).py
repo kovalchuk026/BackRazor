@@ -187,27 +187,33 @@ class Embeddings(nn.Module):
         return embeddings
     
 class Block(nn.Module):
-    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1,
-                 masker=None, new_backrazor=False):
+    def __init__(self, config, vis=False, prune_mode=False, prune_after_softmax=False, n_tokens=1,
+                 masker=None, new_backrazor=False, red=1):
         super(Block, self).__init__()
         self.hidden_size = config.hidden_size
 
         self.new_backrazor = new_backrazor
-
+        self.trans = False
+        if red > 1:
+            self. trans = True
+        
         if new_backrazor:
-            self.attention_norm = LayerNormSparse(config.hidden_size, eps=1e-6, masker=masker, quantize=config.quantize)
-            self.ffn_norm = LayerNormSparse(config.hidden_size, eps=1e-6, masker=masker, quantize=config.quantize)
+            self.attention_norm = LayerNormSparse(config.hidden_size * red, eps=1e-6, masker=masker, quantize=config.quantize)
+            self.ffn_norm = LayerNormSparse(config.hidden_size , eps=1e-6, masker=masker, quantize=config.quantize)
         else:
-            self.attention_norm = LayerNorm(config.hidden_size, eps=1e-6)
-            self.ffn_norm = LayerNorm(config.hidden_size, eps=1e-6)
+            self.attention_norm = LayerNorm(config.hidden_size * red, eps=1e-6)
+            self.ffn_norm = LayerNorm(config.hidden_size , eps=1e-6)
 
+        if self. trans:
+            self. fc = Linear(config. hidden_size * red, config.hidden_size)
+        
         if new_backrazor:
             self.ffn = MlpActPrune(config, masker)
         else:
             self.ffn = Mlp(config)
 
         if new_backrazor:
-            self.attn = AttentionActPrune(config, vis, masker)
+            self.attn = AttentionActPrune(config, vis, masker, red)
         else:
             self.attn = Attention(config, vis, prune_mode, prune_after_softmax, n_tokens)
 
@@ -216,6 +222,8 @@ class Block(nn.Module):
         x = self.attention_norm(x)
         x, weights = self.attn(x)
         x = x + h
+        if self. trans:
+            x = self. fc(x)
 
         # print("attn output {}".format(x.mean(-1).mean(-1)))
 
@@ -266,15 +274,30 @@ class Block(nn.Module):
             self.ffn_norm.bias.copy_(np2th(weights[pjoin(ROOT, MLP_NORM, "bias")]))
 
 class Encoder(nn.Module):
-    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1, **block_kwargs):
+    def __init__(self, config, vis, prune_mode=False, prune_after_softmax=False, n_tokens=1, upto = 10, **block_kwargs):
         super(Encoder, self).__init__()
         self.vis = vis
         self.prune_mode = prune_mode
         self.layer = nn.ModuleList()
         self.encoder_norm = LayerNorm(config.hidden_size, eps=1e-6)
-        for _ in range(config.transformer["num_layers"]):
+        for _ in range(upto):
             layer = Block(config, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
             self.layer.append(copy.deepcopy(layer))
+        
+        self.trans = False
+        if upto < 12:
+            self.trans = True
+            red = 2
+            redconf = copy.deepcopy(config)
+            redconf. hidden_size //= red
+            redconf. transformer['mlp_dim'] //= red
+            self.fc = Linear(redconf.hidden_size, config.hidden_size)
+            layer = Block(copy.deepcopy(redconf), vis, prune_mode, prune_after_softmax, n_tokens, red = red, **block_kwargs)
+            self.layer.append(copy.deepcopy(layer))
+            for _ in range(config.transformer["num_layers"] - upto - 1):
+                layer = Block(redconf, vis, prune_mode, prune_after_softmax, n_tokens, **block_kwargs)
+                self.layer.append(copy.deepcopy(layer))
+        
 
     def forward(self, hidden_states):
         attn_weights = []
@@ -282,17 +305,19 @@ class Encoder(nn.Module):
             hidden_states, weights = layer_block(hidden_states)
             if self.vis:
                 attn_weights.append(weights)
+        if self.trans:
+            hidden_states = self.fc(hidden_states)
         encoded = self.encoder_norm(hidden_states)
         return encoded, attn_weights
     
 class Transformer(nn.Module):
-    def __init__(self, config, img_size, vis, prune_mode=False, prune_after_softmax=False, quantize=False, half=True, **kwargs):
+    def __init__(self, config, img_size, vis, prune_mode=False, prune_after_softmax=False, quantize=False, half=True, upto = 8, **kwargs):
         super(Transformer, self).__init__()
         self.embeddings = Embeddings(config, img_size=img_size)
         config.quantize = quantize
         config.half = half
         self.encoder = Encoder(config, vis, prune_mode, prune_after_softmax=prune_after_softmax,
-                               n_tokens=self.embeddings.position_embeddings.shape[1], **kwargs)
+                               n_tokens=self.embeddings.position_embeddings.shape[1], upto = upto, **kwargs)
 
     def forward(self, input_ids):
         # print("input_ids is {}".format(input_ids.mean(-1).mean(-1)))
@@ -303,7 +328,7 @@ class Transformer(nn.Module):
     
 class VisionTransformer(nn.Module):
     def __init__(self, config, img_size=224, num_classes=21843, zero_head=False, vis=False,
-                 prune_mode=False, prune_after_softmax=False, **kwargs):
+                 prune_mode=False, prune_after_softmax=False, upto = 8, **kwargs):
         super(VisionTransformer, self).__init__()
         self.num_classes = num_classes
         self.zero_head = zero_head
@@ -311,14 +336,13 @@ class VisionTransformer(nn.Module):
         self.prune_mode = prune_mode
         self.prune_after_softmax = prune_after_softmax
 
-        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, **kwargs)
+        self.transformer = Transformer(config, img_size, vis, prune_mode, prune_after_softmax, upto=upto, **kwargs)
         self.head = Linear(config.hidden_size, num_classes)
-
+        self. upto = upto
     def forward(self, x, labels=None, return_encoded_feature=False):
         x, attn_weights = self.transformer(x)
         if return_encoded_feature:
             return x
-
         logits = self.head(x[:, 0])
 
         if labels is not None:
@@ -370,7 +394,8 @@ class VisionTransformer(nn.Module):
 
             for bname, block in self.transformer.encoder.named_children():
                 for uname, unit in block.named_children():
-                    unit.load_from(weights, n_block=uname)
+                    if(int(uname)<self.upto):
+                        unit.load_from(weights, n_block=uname)
 
             if self.transformer.embeddings.hybrid:
                 self.transformer.embeddings.hybrid_model.root.conv.weight.copy_(np2th(weights["conv_root/kernel"], conv=True))
@@ -385,6 +410,7 @@ class VisionTransformer(nn.Module):
 
 
 CONFIGS = {
+    'ViT-Ti_16': configs.get_ti16_config(),
     'ViT-B_16': configs.get_b16_config(),
     'ViT-B_32': configs.get_b32_config(),
     'ViT-L_16': configs.get_l16_config(),
